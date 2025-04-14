@@ -4,6 +4,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 
 from zonos.config import BackboneConfig, InferenceParams
+from zonos.utils import DEFAULT_DEVICE
 
 
 def precompute_freqs_cis(seq_len: int, n_elem: int, base: float = 10000) -> torch.Tensor:
@@ -133,8 +134,10 @@ class Attention(nn.Module):
 
         q, k, v = map(lambda x: x.transpose(1, 2), (q, k, v))
 
+        if DEFAULT_DEVICE == torch.device("mps"):
+            q, k, v = q.cpu(), k.cpu(), v.cpu()
         y = F.scaled_dot_product_attention(q, k, v, is_causal=seqlen > 1, enable_gqa=True)
-
+        y = y.to(DEFAULT_DEVICE)
         y = y.transpose(1, 2).contiguous().view(batch_size, seqlen, q_size)
 
         y = self.out_proj(y)

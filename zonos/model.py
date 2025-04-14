@@ -235,7 +235,12 @@ class Zonos(nn.Module):
         # Use CUDA Graphs if supported, and torch.compile otherwise.
         cg = self.can_use_cudagraphs()
         decode_one_token = self._decode_one_token
-        decode_one_token = torch.compile(decode_one_token, dynamic=True, disable=cg or disable_torch_compile)
+        if DEFAULT_DEVICE == torch.device("mps"):
+            decode_one_token = torch.compile(
+                decode_one_token, dynamic=True, backend="aot_eager", disable=cg or disable_torch_compile
+            )
+        else:
+            decode_one_token = torch.compile(decode_one_token, dynamic=True, disable=cg or disable_torch_compile)
 
         unknown_token = -1
         audio_seq_len = prefix_audio_len + max_new_tokens
